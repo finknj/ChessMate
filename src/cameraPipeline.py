@@ -52,7 +52,7 @@ def edge_detection(img):
 
 def line_transform(img):
 	
-	hough_lines = cv.HoughLinesP( img, rho = 0.5, theta = np.pi / 180, threshold = 50, minLineLength = 10, maxLineGap = 10 )
+	hough_lines = cv.HoughLinesP( img, rho = 0.1, theta = np.pi / 90, threshold = 12, minLineLength = 750, maxLineGap = 3)
 	return hough_lines 
 
 def draw_lines(img, lines, color = [255, 0, 0], thickness = 5, makeCopy = True):
@@ -195,7 +195,6 @@ def rect_parse(rectangle, splits):
 
 	return (rectangle_list, v_lines, h_lines) 
 
-#def find_squares():
 
 
 def draw_final_chessboard( v_lines, h_lines, outer_boundary, img, makeCopy = True):
@@ -227,6 +226,21 @@ def draw_final_chessboard( v_lines, h_lines, outer_boundary, img, makeCopy = Tru
 
 	return img
 
+
+def get_chessboard_dictionary(rectangle_list):
+
+	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+	
+	chessboard_dictionary = {}
+
+	for r in range (0, 8):
+		alpha_id = letters[r]
+		for c in range(0, 8):
+			num_id = str( c + 1 )
+			position_string = alpha_id + num_id
+			chessboard_dictionary[position_string] = rectangle_list[r * 8 + c]
+		
+	return chessboard_dictionary
 
 def data_Collection():
 	h = 1080
@@ -264,14 +278,8 @@ def data_Collection():
 				rectangle_list, v_lines, h_lines = rect_parse(rect, splits)
 				chessboard_img = draw_final_chessboard( v_lines, h_lines, rect, dialation_image_gray)
 
-				#Line_image = draw_lines(dialation_image_gray, line_list)
-
-
-
-
-				print(v_lines)
-
-
+				dictionary = get_chessboard_dictionary( rectangle_list )
+				print(dictionary['a8'])
 
 
 				cv.imwrite(filename, chessboard_img)
