@@ -31,11 +31,11 @@ def img_pipeline(img):
 	img = roi_filter(img)
 	img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
-
 	return img
 
 def img_grayscale(img):
 	img = cv.cvtColor(img, cv.COLOR_RGB2GRAY)
+
 	return img
 
 #Uses Canny Edge detection and image dialtion to create a 
@@ -71,12 +71,18 @@ def draw_lines(img, lines, color = [255, 0, 0], thickness = 5, makeCopy = True):
 
 def boundaries(line_list):
 	temp_line_list = []
+	y_avg_list = []
+
 	x_min = 10000
 	x_max = 0
 	x1_sum = 0
 	x2_sum = 0
 	y_avg = 0
-	i = 0 
+	count = 0
+	y_sum = 0
+	y_avg = 0
+	i = 0
+
 	for line in line_list:
 		for x1, y1, x2, y2 in line:
 			if(x1 < x_min):
@@ -93,11 +99,6 @@ def boundaries(line_list):
 
 	temp_line_list = sorted(temp_line_list, key = operator.itemgetter(2))
 
-
-	count = 0
-	y_sum = 0
-	y_avg = 0
-	y_avg_list = []
 
 	for line in temp_line_list:
 		x1, x2, y = line
@@ -116,53 +117,75 @@ def boundaries(line_list):
 				
 		x1_sum += x1
 		x2_sum += x2
+		i += 1			#WHAT IS THIS USED FOR?
 
-		if(i == 0):
-			x1_avg = x1_sum//len(line_list)
-		if(i == (len(line_list) - 1)):
-			x2_avg = x2_sum//len(line_list)
-		i += 1
+	x1_avg = x1_sum//len(line_list)
+	x2_avg = x2_sum//len(line_list)
+
+
 	
 	if(count != 0):
 		y_avg_list.append(y_avg)
 
 	y_min = min(y_avg_list)
 	y_max = max(y_avg_list)
+	
 	rectangle = (x1_avg, y_min, x2_avg, y_max)
 	splits = y_avg_list[1:-1]
 
-	print(splits)
 
 	return(rectangle, splits)
 	
 
 
-def rect_parse(rectangle, splits, img):
-	x1, y1, x2, y2 = rectangle
+def rect_parse(rectangle, splits):
+
 	square_count = (len(splits) + 1) * (len(splits) + 1)
 	rectangle_list = [[] for i in range(square_count) ]
-
+	x1, y1, x2, y2 = rectangle
 	x_step = abs(x2 - x1)// 8
-	x1_new = x1
-	x2_new = x2
+	y_step = abs(y2 - y1)// 8
+	v_lines = []
+	h_lines = []
 
 	print(rectangle)
 
+	for i in range (0, len(splits) + 2):
+		y1_new = y1 + i * y_step + y_step	#h line count is 7+2 = 9
+		x1_new = x1 + i * x_step
+
+		h_lines.append( y1_new )
+		v_lines.append( x1_new )
+
+	for r in range(0, len(splits) + 1):
+
+		y2_new = r * ( y_step + 1 ) + y1
+		y1_new = r * y_step + y1
+		
+		for c in range (0, len(splits) + 1):
+
+			index = ( r * (len(splits) + 1 ) ) + c
+			x2_new = c * (x_step + 1) + x1
+			x1_new = c * x_step + x1
+
+			rectangle_list[ index ] = ( x1_new, y1_new, x2_new, y2_new )
+	
 	for i in range (0, len(splits) + 1):
+
 		if(i == 0):
 			for j in range((len(splits) + 1)):
 				x1_new = x_step * j + x1
-				x2_new = x_step * (j + 1) + x1	
-
-				cv.line(img, (x1_new, y1), (x1_new, y2), [255,0,0], 5, cv.LINE_AA)				
+				x2_new = x_step * (j + 1) + x1					
 
 				rectangle_list[j] = (x1_new, y1, x2_new, splits[i])
+
 		elif(i >= (len(splits))):
 			for j in range((len(splits) + 1)):
 				x1_new = x_step * j + x1
 				x2_new = x_step * (j + 1) + x1
 
 				rectangle_list[j] = (x1_new, splits[-1], x2_new, y2)
+
 		else:
 			for j in range((len(splits) + 1)):
 				x1_new = x_step * j + x1
@@ -170,16 +193,46 @@ def rect_parse(rectangle, splits, img):
 
 				rectangle_list[j] = (x1_new, splits[i - 1], x2_new, splits[i])
 
-	return rectangle_list
+	return (rectangle_list, v_lines, h_lines) 
 
 #def find_squares():
+
+
+def draw_final_chessboard( v_lines, h_lines, outer_boundary, img, makeCopy = True):
+
+	if( makeCopy ):
+		img = np.copy(img)
+
+	if( len(img.shape) == 2 ):
+		img = cv.cvtColor(img, cv.COLOR_GRAY2RGB)
+
+	thickness = 10
+	x1, y1, x2, y2 = outer_boundary
+
+	# DRAW CROSS SECTION LINES
+	color = [255, 0 , 0]
+	for i in range( len( v_lines )):
+		x = v_lines[ i ]
+		cv.line(img, (x, y1), (x, y2), color, thickness, cv.LINE_AA)
+	
+		y = h_lines[ i ]
+		cv.line(img, (x1, y), (x2, y), color, thickness, cv.LINE_AA)
+
+	# DRAW OUTER PERIMETER
+	color = [0, 255, 0]
+	cv.line(img, (x1, y1), (x2, y1), color, thickness, cv.LINE_AA)
+	cv.line(img, (x1, y2), (x2, y2), color, thickness, cv.LINE_AA)
+	cv.line(img, (x1, y1), (x1, y2), color, thickness, cv.LINE_AA)
+	cv.line(img, (x2, y1), (x2, y2), color, thickness, cv.LINE_AA)
+
+	return img
 
 
 def data_Collection():
 	h = 1080
 	w = 1920
 	i = 0
-	prefix = 'img_hough_lines_'
+	prefix = 'img_final_board_'
 	suffix = '.JPG' 
 
 	dialation_image = cv.imread('/home/pi/Desktop/ChessMate/data/image_collection/DialationGray.JPG')
@@ -204,19 +257,24 @@ def data_Collection():
 				filename = img_folder + prefix + str(i) + suffix
 				
 				image = edge_detection(image)
-				#image = img_grayscale(image)
-				line_list = list(line_transform(dialation_image_gray))
+				
+				horizontal_lines = list( line_transform(dialation_image_gray) )
+				rect, splits = boundaries( horizontal_lines )
+
+				rectangle_list, v_lines, h_lines = rect_parse(rect, splits)
+				chessboard_img = draw_final_chessboard( v_lines, h_lines, rect, dialation_image_gray)
+
+				#Line_image = draw_lines(dialation_image_gray, line_list)
 
 
 
-				Line_image = draw_lines(dialation_image_gray, line_list)
 
-				rect, splits = boundaries(line_list)
-
-				rectangle_list = rect_parse(rect, splits, Line_image)
+				print(v_lines)
 
 
-				cv.imwrite(filename, Line_image)
+
+
+				cv.imwrite(filename, chessboard_img)
 				
 			i+=1
 				
