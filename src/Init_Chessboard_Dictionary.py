@@ -5,10 +5,14 @@ import picamera
 import picamera.array
 import time
 import operator
+import pickle
 
 
 CWD = '/home/pi/Desktop/ChessMate/'
 img_folder = CWD + 'data/image_collection/'
+
+
+picklepath = CWD + 'data/pickle/chessboard_pickle.p'
 
 
 def roi_filter(img):
@@ -33,10 +37,6 @@ def img_pipeline(img):
 
 	return img
 
-def img_grayscale(img):
-	img = cv.cvtColor(img, cv.COLOR_RGB2GRAY)
-
-	return img
 
 #Uses Canny Edge detection and image dialtion to create a 
 # edge diagram of the chess board
@@ -55,19 +55,6 @@ def line_transform(img):
 	hough_lines = cv.HoughLinesP( img, rho = 0.1, theta = np.pi / 90, threshold = 12, minLineLength = 750, maxLineGap = 3)
 	return hough_lines 
 
-def draw_lines(img, lines, color = [255, 0, 0], thickness = 5, makeCopy = True):
-	if(makeCopy):
-		img = np.copy(img)
-		img = cv.cvtColor(img, cv.COLOR_GRAY2RGB)
-		print(img.shape)
-	cleaned_list = []
-	for line in lines:
-		for x1, y1, x2, y2 in line:
-			if((abs(y2 - y1) <= 5) and (abs(x2 - x1) in range (500, 800))):
-				cleaned_list.append((x1, y1, x2, y2))
-				cv.line(img, (x1, y1), (x2, y2), [255,0,0], thickness, cv.LINE_AA)
-	print('# of lines detected: ', len(cleaned_list))
-	return(img)
 
 def boundaries(line_list):
 	temp_line_list = []
@@ -137,62 +124,36 @@ def boundaries(line_list):
 	return(rectangle, splits)
 	
 
-
-def rect_parse(rectangle, splits):
+def rect_parse(rectangle, splits, thickness = 10):
 
 	square_count = (len(splits) + 1) * (len(splits) + 1)
 	rectangle_list = [[] for i in range(square_count) ]
 	x1, y1, x2, y2 = rectangle
-	x_step = abs(x2 - x1)// 8
 	y_step = abs(y2 - y1)// 8
+	x_step = abs(x2 - x1)// 8
 	v_lines = []
 	h_lines = []
 
-	print(rectangle)
 
-	for i in range (0, len(splits) + 2):
-		y1_new = y1 + i * y_step + y_step	#h line count is 7+2 = 9
-		x1_new = x1 + i * x_step
+	for i in range( 0, len( splits ) + 2 ):
+		y1_new = y1 + i * y_step + y_step # h line count is 7 + 2 = 9
+		x1_new = x1 + i * x_step # v line count is 7
 
 		h_lines.append( y1_new )
 		v_lines.append( x1_new )
 
-	for r in range(0, len(splits) + 1):
+	for r in range (0, len(splits) + 1):
 
-		y2_new = r * ( y_step + 1 ) + y1
+		y2_new = ( r + 1 ) * y_step + y1
 		y1_new = r * y_step + y1
-		
+
 		for c in range (0, len(splits) + 1):
 
-			index = ( r * (len(splits) + 1 ) ) + c
-			x2_new = c * (x_step + 1) + x1
+			index = ( r * ( len(splits) + 1 ) ) + c
+			x2_new = ( c + 1 ) * x_step + x1
 			x1_new = c * x_step + x1
 
 			rectangle_list[ index ] = ( x1_new, y1_new, x2_new, y2_new )
-	
-	for i in range (0, len(splits) + 1):
-
-		if(i == 0):
-			for j in range((len(splits) + 1)):
-				x1_new = x_step * j + x1
-				x2_new = x_step * (j + 1) + x1					
-
-				rectangle_list[j] = (x1_new, y1, x2_new, splits[i])
-
-		elif(i >= (len(splits))):
-			for j in range((len(splits) + 1)):
-				x1_new = x_step * j + x1
-				x2_new = x_step * (j + 1) + x1
-
-				rectangle_list[j] = (x1_new, splits[-1], x2_new, y2)
-
-		else:
-			for j in range((len(splits) + 1)):
-				x1_new = x_step * j + x1
-				x2_new = x_step * (j + 1) + x1
-
-				rectangle_list[j] = (x1_new, splits[i - 1], x2_new, splits[i])
-
 	return (rectangle_list, v_lines, h_lines) 
 
 
@@ -226,7 +187,6 @@ def draw_final_chessboard( v_lines, h_lines, outer_boundary, img, makeCopy = Tru
 
 	return img
 
-
 def get_chessboard_dictionary(rectangle_list):
 
 	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
@@ -242,6 +202,11 @@ def get_chessboard_dictionary(rectangle_list):
 		
 	return chessboard_dictionary
 
+def save_dictionary_locations(dictionary , picklepath = picklepath):
+	chessboard_pickle = {}
+	chessboard_pickle['chessboard_pickle'] = dictionary
+	pickle.dump(chessboard_pickle, open(picklepath, ('wb')))
+
 def data_Collection():
 	h = 1080
 	w = 1920
@@ -250,7 +215,6 @@ def data_Collection():
 	suffix = '.JPG' 
 
 	dialation_image = cv.imread('/home/pi/Desktop/ChessMate/data/image_collection/DialationGray.JPG')
-	print(dialation_image.shape)
 	dialation_image_gray = cv.cvtColor(dialation_image, cv.COLOR_RGB2GRAY)
 
 	with picamera.PiCamera() as camera:
@@ -279,7 +243,7 @@ def data_Collection():
 				chessboard_img = draw_final_chessboard( v_lines, h_lines, rect, dialation_image_gray)
 
 				dictionary = get_chessboard_dictionary( rectangle_list )
-				print(dictionary['a8'])
+				save_dictionary_locations(dictionary)
 
 
 				cv.imwrite(filename, chessboard_img)
