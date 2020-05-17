@@ -62,19 +62,19 @@ def parse_full_image(img, chessboard_dictionary):
 
 
 
-def cropimage(img, position, buffer = 25):
+def cropimage(img, position, buffer = 20):
 	
 	x1, y1, x2, y2 = position
 
 	y1 = y1 - buffer
 	if(y1 < 0): y1 = 0
 
-	y2 = y2 + buffer
+	#y2 = y2 + buffer
 	
 	x1 = x1 - buffer
 	if(x1 < 0): x1 = 0
 
-	x2 = x2 + buffer
+	#x2 = x2 + buffer
 
 	cropped_image = img[y1:y2, x1:x2]
 	
