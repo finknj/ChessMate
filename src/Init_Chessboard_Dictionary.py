@@ -129,8 +129,8 @@ def rect_parse(rectangle, splits, thickness = 10):
 	square_count = (len(splits) + 1) * (len(splits) + 1)
 	rectangle_list = [[] for i in range(square_count) ]
 	x1, y1, x2, y2 = rectangle
-	y_step = abs(y2 - y1)// 8
-	x_step = abs(x2 - x1)// 8
+	y_step = abs(y2 - y1)/ 8
+	x_step = abs(x2 - x1)/ 8
 	v_lines = []
 	h_lines = []
 
@@ -139,19 +139,19 @@ def rect_parse(rectangle, splits, thickness = 10):
 		y1_new = y1 + i * y_step + y_step # h line count is 7 + 2 = 9
 		x1_new = x1 + i * x_step # v line count is 7
 
-		h_lines.append( y1_new )
-		v_lines.append( x1_new )
+		h_lines.append( int( round(y1_new) ) )
+		v_lines.append( int( round(x1_new) ) )
 
 	for r in range (0, len(splits) + 1):
 
-		y2_new = ( r + 1 ) * y_step + y1
-		y1_new = r * y_step + y1
+		y2_new = int(round(( r + 1 ) * y_step + y1))
+		y1_new = int(round(r * y_step + y1))
 
 		for c in range (0, len(splits) + 1):
 
 			index = ( r * ( len(splits) + 1 ) ) + c
-			x2_new = ( c + 1 ) * x_step + x1
-			x1_new = c * x_step + x1
+			x2_new = int(round(( c + 1 ) * x_step + x1))
+			x1_new = int(round(c * x_step + x1))
 
 			rectangle_list[ index ] = ( x1_new, y1_new, x2_new, y2_new )
 	return (rectangle_list, v_lines, h_lines) 
