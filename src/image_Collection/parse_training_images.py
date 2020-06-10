@@ -8,10 +8,10 @@ import time
 import glob
 from tqdm import tqdm
 
-CWD = '/home/pi/Desktop/ChessMate/'
-train_image_folder = CWD + 'data/train/'
-temp_image_folder = CWD + 'data/train/temp/'
-picklepath = CWD + 'data/pickle/chessboard_pickle.p'
+CWD = '/home/pi/Desktop/'
+train_image_folder = CWD + 'train/'
+temp_image_folder = CWD + 'temp/'
+picklepath = CWD + 'ChessMate/' + 'data/pickle/chessboard_pickle.p'
 
 IMAGE_SIZE = 128
 
@@ -53,12 +53,12 @@ def cropimage(img, position, buffer = 20):
 	y1 = y1 - buffer
 	if(y1 < 0): y1 = 0
 
-	#y2 = y2 + buffer
+	y2 = y2 + (buffer - 5)
 	
 	x1 = x1 - buffer
 	if(x1 < 0): x1 = 0
 
-	#x2 = x2 + buffer
+	x2 = x2 + (buffer - 5)
 
 	cropped_image = img[y1:y2, x1:x2]
 
