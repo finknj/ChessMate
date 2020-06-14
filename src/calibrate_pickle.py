@@ -136,8 +136,14 @@ def rect_parse(rectangle, splits, thickness = 10):
 		y1_new = y1 + i * y_step + y_step # h line count is 7 + 2 = 9
 		x1_new = x1 + i * x_step # v line count is 7
 
-		h_lines.append( int( round(y1_new) ) )
+		if( i != ( len( splits ) + 2 ) ):
+			h_lines.append( int( round(y1_new) ) )
+		else: 
+			h_lines.append( int( y2 ) )
+			print('here')
+
 		v_lines.append( int( round(x1_new) ) )
+
 
 	for r in range (0, len(splits) + 1):
 
