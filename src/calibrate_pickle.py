@@ -50,7 +50,7 @@ def edge_detection(img):
 
 def line_transform(img):
 	
-	hough_lines = cv.HoughLinesP( img, rho = 0.1, theta = np.pi / 90, threshold = 12, minLineLength = 750, maxLineGap = 3)
+	hough_lines = cv.HoughLinesP( img, rho = 0.1, theta = np.pi / 90, threshold = 12, minLineLength = 650, maxLineGap = 10 )
 	return hough_lines
 
 

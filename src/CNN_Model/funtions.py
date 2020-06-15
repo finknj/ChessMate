@@ -7,12 +7,11 @@ import time
 import pickle
 import tensorflow as tf
 import warnings
-import json 
-import h5py
-from tensorflow.python.util import deprecation
-from tensorflow.python.keras.models import load_model
 
-print(tf.VERSION)
+from threading import Event, Thread, _after_fork
+from tensorflow.python.util import deprecation
+
+
 
 warnings.filterwarnings('ignore')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
@@ -25,6 +24,8 @@ tf.compat.v1.keras.backend.clear_session()
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.6
 session = tf.compat.v1.Session(config = config)
+
+#==========================================================================================================================
 
 CWD = '/home/pi/Desktop/ChessMate/'
 modelPath = CWD + 'data/model/best.h5'
@@ -39,22 +40,19 @@ classifications = ["blue_bishop\\", "blue_king\\", "blue_knight\\", "blue_pawn\\
 
 IMAGE_SIZE = 128
 
-def load_trained_model():
-	return(tf.python.keras.models.load_model('/home/pi/Desktop/ChessMate/data/model/best.h5')
+#==========================================================================================================================
+#CAMERA PIPELINE FUNCTIONS
+#==========================================================================================================================
 
-def load_CNN_model():
-	print('Loading CNN Model...')
+def initialize_camera():
+	camera = PiCamera()
+	camera.resolution = (1920, 1080)
+	dummyFrame = PiRGBArray(camera, size = (1920, 1080))
+	dummyFrame = img_pipeline(dummyFrame)
+	dummyFrame = cv.resize(dummyFrame, (320, 240))
+	
+	return(camera, dummyFrame)
 
-	if(os.path.isfile(modelPath)):
-
-		print('Loading..')
-
-		model = load_model( modelPath, compile = False )
-
-		print('CNN Initialiazed skynet pewpew') 
-		return model
-
-	else: print('error')
 
 def roi_filter(img):
 	rows, cols = img.shape[:2]
@@ -74,23 +72,7 @@ def img_pipeline(img):
 	img = roi_filter(img)
 	img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
-	
-
 	return img
-
-
-
-
-def load_chessboard_dictionary():
-
-	with open( picklepath, mode = 'rb' ) as f:
-		file = pickle.load( f )
-		chessboard_dictionary = file['chessboard_pickle']
-
-
-	
-
-	return chessboard_dictionary
 
 
 def parse_full_image(img, chessboard_dictionary):
@@ -108,11 +90,7 @@ def parse_full_image(img, chessboard_dictionary):
 			image = cv.resize(image, (IMAGE_SIZE, IMAGE_SIZE))
 			image_list[c + r * 8] = image
 
-
 	return image_list
-
-
-
 
 def cropimage(img, position, buffer = 20):
 	
@@ -131,6 +109,76 @@ def cropimage(img, position, buffer = 20):
 	cropped_image = img[y1:y2, x1:x2]
 
 	return cropped_image
+
+def updateWindow(img, handle, thread_event, termination_event):		#TODO	
+	cv.imshow(handle, img)		#CHANGE TO THREAD LATER
+
+
+#==========================================================================================================================
+#Dictionary Functions
+#==========================================================================================================================
+
+def load_chessboard_dictionary():
+
+	with open( picklepath, mode = 'rb' ) as f:
+		file = pickle.load( f )
+		chessboard_dictionary = file['chessboard_pickle']
+
+	return chessboard_dictionary
+
+
+#Creates an empty dictionary of chessboard locations
+def create_Chessboard_Dictionary(picklepath = picklepath_chessboard):
+	predictions_dictionary = {}
+	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+
+	for r in range(0, 8):
+		alpha_id = letters[r]
+		for c in range(0, 8):
+			num_id = str(c + 1)
+			position_string = alpha_id + num_id
+			predictions_dictionary[ position_string ] = 0
+			
+
+	pickle.dump(predictions_dictionary, open( picklepath, 'wb' ) )
+
+	return(predictions_dictionary)
+
+
+
+#Updates to reflect predictions of each tile
+def update_Chessboard_Dictionary(predictions, predictions_dictionary, predictions_event, 
+					termination_event, picklepath = picklepath_chessboard):
+
+	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+
+
+	for r in range(0, 8):
+		alpha_id = letters[r]
+		for c in range(0, 8):
+			num_id = str(c + 1)
+			position_string = alpha_id + num_id
+			prediction_value = str( predictions[ r * 8 + c ] )
+
+			predictions_dictionary[ position_string ] = prediction_value
+
+			print( position_string + ': ' + str(predictions_dictionary[ position_string] ) )
+
+	pickle.dump(predictions_dictionary, open( picklepath, 'wb' ) )
+
+def update_Engine(predictions_dictionary, thread_event, termination_event):
+	a = 1
+
+
+
+#==========================================================================================================================
+#CNN Model Functions
+#==========================================================================================================================
+
+def load_trained_model():
+	return(tf.python.keras.models.load_model('/home/pi/Desktop/ChessMate/data/model/best.h5')
+
+
 
 
 
@@ -153,46 +201,9 @@ def store_images(imgs, image_folder, dictionary,
 			cv.imwrite(filename, image)
 
 
-#Creates an empty dictionary of chessboard locations
-def create_Chessboard_Dictionary(picklepath = picklepath_chessboard):
-	predictions_dictionary = {}
-	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+	
 
-	for r in range(0, 8):
-		alpha_id = letters[r]
-		for c in range(0, 8):
-			num_id = str(c + 1)
-			position_string = alpha_id + num_id
-			predictions_dictionary[ position_string ] = 0
-			
-
-	pickle.dump(predictions_dictionary, open( picklepath, 'wb' ) )
-
-	return(predictions_dictionary)
-
-
-#Updates to reflect predictions of each tile
-def update_Chessboard_Dictionary(predictions, predictions_dictionary, picklepath = picklepath_chessboard):
-
-	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-
-
-	for r in range(0, 8):
-		alpha_id = letters[r]
-		for c in range(0, 8):
-			num_id = str(c + 1)
-			position_string = alpha_id + num_id
-			prediction_value = str( predictions[ r * 8 + c ] )
-
-			predictions_dictionary[ position_string ] = prediction_value
-
-			#print( position_string + ': ' + str(predictions_dictionary[ position_string] ) )
-
-	pickle.dump(predictions_dictionary, open( picklepath, 'wb' ) )
-
-
-
-def update_Predictions(model, imgs):
+def get_new_predictions(model, imgs):
 
 
 	predictions = []
@@ -208,55 +219,75 @@ def update_Predictions(model, imgs):
 
 	return( predictions, confidenceLevels ) 
 	
+#==========================================================================================================================
+#MISC Functions
+#==========================================================================================================================
 
-def main():
-
-	h = 1080
-	w = 1920
-	i = 0
-	suffix = '.JPG'
-	filename = CWD + 'data/image_collection/' + 'cnn_test_image' + suffix
-
-	
-
-	dictionary = load_chessboard_dictionary()
-	predictions_Dictionary = create_Chessboard_Dictionary()
+def initializeWindow(dummyFrame):
+	windowHandle = 'Camera Pipeline'
+	cv.namedWindow(windowHandle, cv.WINDOW_NORMAL)
+	cv.resizeWindow(windowHandle, (320, 240))
+	cv.imshow(windowHandle)
+	return(windowHandle)
 
 
-	model = load_CNN_model()
-
-	with picamera.PiCamera() as camera:
-		camera.start_preview()
-		time.sleep(2)
-
-		camera.resolution = (w, h)						
-		while( i < 1 ):
-			
-			with picamera.array.PiRGBArray(camera) as stream:
-
-				camera.capture( stream, format = 'rgb' )
-
-				capture = stream.array
-
-				image = img_pipeline( capture )
-
-				imgs = parse_full_image(image, dictionary)
-				#store_images(imgs, testPath, dictionary )
-
-				predictions, confidenceLevels = update_Predictions(model, imgs)
-				update_Chessboard_Dictionary(predictions, predictions_Dictionary) 
-				print(predictions[0])
 
 
-				#cv.imwrite(filename, image)
-
-			i += 1
-
-	camera.close()
 
 
-if __name__ == "__main__":
-	main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

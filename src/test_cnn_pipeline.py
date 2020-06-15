@@ -175,17 +175,24 @@ def update_Chessboard_Dictionary(predictions, predictions_dictionary, picklepath
 
 	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 
+	print('\t1\t2\t3\t4\t5\t6\t7\t8\n\n')
 
 	for r in range(0, 8):
 		alpha_id = letters[r]
+		row_str = alpha_id + '\t'
+		
 		for c in range(0, 8):
 			num_id = str(c + 1)
 			position_string = alpha_id + num_id
 			prediction_value = str( predictions[ r * 8 + c ] )
 
 			predictions_dictionary[ position_string ] = prediction_value
+		
+			row_str += prediction_value + '\t'			
 
 			#print( position_string + ': ' + str(predictions_dictionary[ position_string] ) )
+
+		print(row_str)
 
 	pickle.dump(predictions_dictionary, open( picklepath, 'wb' ) )
 
@@ -229,7 +236,7 @@ def main():
 		time.sleep(2)
 
 		camera.resolution = (w, h)						
-		while( i < 1 ):
+		while( i < 3 ):
 			
 			with picamera.array.PiRGBArray(camera) as stream:
 
@@ -240,7 +247,7 @@ def main():
 				image = img_pipeline( capture )
 
 				imgs = parse_full_image(image, dictionary)
-				#store_images(imgs, testPath, dictionary )
+				store_images(imgs, testPath, dictionary )
 
 				predictions, confidenceLevels = update_Predictions(model, imgs)
 				update_Chessboard_Dictionary(predictions, predictions_Dictionary) 
@@ -248,8 +255,9 @@ def main():
 
 
 				#cv.imwrite(filename, image)
-
+			time.sleep(3)
 			i += 1
+			
 
 	camera.close()
 
