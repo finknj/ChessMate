@@ -5,7 +5,7 @@ import time
 import pickle
 import warnings
 
-from functions import *
+from funtions import *
 from threading import Event, Thread, _after_fork
 
 warnings.filterwarnings('ignore')
@@ -74,35 +74,47 @@ def main():
 	frame_index = 0
 
 	print('Initiailizing Camera')
-	camera, frame = initialize_camera()
-	windowHandle = initialize_window( frame )
+	#image = np.empty( shape = (1920, 1080, 3) )
+	
+	camera, dummyFrame = initialize_camera()
+
+	rawCapture = picamera.array.PiRGBArray(camera, size = (1920, 1080) )
+	camera.capture(rawCapture, format = 'bgr')
+
+	image = rawCapture.array
+	windowHandle = initializeWindow( image )
 
 	print('Initializing CNN Model..')
 	model = load_trained_model()
 
-	image = frame.array
-	image = img_pipeline(image)
-	imgs = parse_full_image(image, calibrationDictionary)
 
-	predictions = get_new_predictions(model, imgs)
-	
+
 	print('Initializing Chessboard Dictionaries')
 	chessboardDictionary = create_Chessboard_Dictionary()		#Holds the Current Prediction of all 64 squares
-	calibrationDictionary = load_Chessboard_Dictionary()		#Holds Position Data for all 64 squares
+	calibrationDictionary = load_chessboard_dictionary()		#Holds Position Data for all 64 squares
+
+
+	#imgs = parse_full_image(dummyFrame, calibrationDictionary)
+	#predictions = get_new_predictions(model, imgs)
+	predictions = np.zeros( shape = (64) )	
 
 
 	print('Initializing Worker Threads For Engine Interface')
-	window_display_event = run_window_display_thread(threads, image, windowHandle, termination_event)
+	window_display_event = run_window_display_thread(threads, dummyFrame, windowHandle, termination_event)
 	chessboard_engine_event = begin_send_to_engine(threads, chessboardDictionary, termination_event)
-	predictions_file_event = run_predictions_file_thread(threads, predictions, prediction_dictionary, termination_event)
+	predictions_file_event = run_predictions_file_thread(threads, predictions, chessboardDictionary, termination_event)
+
+	raw_Capture = picamera.array.PiRGBArray(camera, size = (1920, 1080) )
+	
+	time.sleep(1)	#Warm Up Period
 
 	
-	
-	time.sleep(0.5)	#Warm Up Period
-	for frame in camera.capture_continuous(frame, format = 'bgr', muse_video_port = true )
 
-		print('\nProgram is ready! Press 'r' to execute')
-		while((cv.waitKey(30) & 0xFF) != ord('r')): None	#GADFLY Loop (busy/waiting)
+	for frame in camera.capture_continuous(raw_Capture, format = 'bgr', use_video_port = True ):
+
+		print('\nProgram is ready! Press "r" to execute')
+		#while((cv.waitKey(30) & 0xFF) != ord('r')): None	#GADFLY Loop (busy/waiting)
+
 
 		print('\nProgram is now executing..')
 
@@ -111,6 +123,9 @@ def main():
 			#Read Camera Frame / Send Image Through Pipeline / Parse Image
 
 			image = frame.array
+
+			print(type( image )) 
+
 			image = img_pipeline(image)
 			imgs = parse_full_image(image, calibrationDictionary)
 
@@ -130,6 +145,7 @@ def main():
 
 			if((cv.waitKey(1) & 0xFF) == 27): break		#ESC Key to Escape Runtime 
 			
+			image.truncate()
 
 	initiate_shutdown(threads, camera, termination_event)
 

@@ -45,11 +45,12 @@ IMAGE_SIZE = 128
 #==========================================================================================================================
 
 def initialize_camera():
-	camera = PiCamera()
+	camera = picamera.PiCamera()
 	camera.resolution = (1920, 1080)
-	dummyFrame = PiRGBArray(camera, size = (1920, 1080))
-	dummyFrame = img_pipeline(dummyFrame)
-	dummyFrame = cv.resize(dummyFrame, (320, 240))
+	dummyFrame = picamera.array.PiRGBArray(camera, size = (1920, 1080) )
+
+	#dummyImage = img_pipeline(dummyFrame.array)
+	#dummyImage = cv.resize(dummyImage, (320, 240))
 	
 	return(camera, dummyFrame)
 
@@ -110,9 +111,14 @@ def cropimage(img, position, buffer = 20):
 
 	return cropped_image
 
-def updateWindow(img, handle, thread_event, termination_event):		#TODO	
-	cv.imshow(handle, img)		#CHANGE TO THREAD LATER
-
+def updateWindow(img, handle, thread_event, termination_event):	
+	
+	while( not termination_event.isSet() ):
+		thread_event.wait()
+		#cv.resizeWindow( handle, img )	
+		#image = img.array		
+		#cv.imshow( handle, image )						
+		thread_event.clear()
 
 #==========================================================================================================================
 #Dictionary Functions
@@ -128,6 +134,7 @@ def load_chessboard_dictionary():
 
 
 #Creates an empty dictionary of chessboard locations
+
 def create_Chessboard_Dictionary(picklepath = picklepath_chessboard):
 	predictions_dictionary = {}
 	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
@@ -147,27 +154,34 @@ def create_Chessboard_Dictionary(picklepath = picklepath_chessboard):
 
 
 #Updates to reflect predictions of each tile
+
 def update_Chessboard_Dictionary(predictions, predictions_dictionary, predictions_event, 
 					termination_event, picklepath = picklepath_chessboard):
 
 	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 
+	while( not termination_event.isSet() ):
+		predictions_event.wait()
+		for r in range(0, 8):
+			alpha_id = letters[r]
+			for c in range(0, 8):
+				num_id = str(c + 1)
+				position_string = alpha_id + num_id
+				prediction_value = str( predictions[ r * 8 + c ] )
 
-	for r in range(0, 8):
-		alpha_id = letters[r]
-		for c in range(0, 8):
-			num_id = str(c + 1)
-			position_string = alpha_id + num_id
-			prediction_value = str( predictions[ r * 8 + c ] )
+				predictions_dictionary[ position_string ] = prediction_value
 
-			predictions_dictionary[ position_string ] = prediction_value
+				print( position_string + ': ' + str(predictions_dictionary[ position_string] ) )
 
-			print( position_string + ': ' + str(predictions_dictionary[ position_string] ) )
+		pickle.dump(predictions_dictionary, open( picklepath, 'wb' ) )		
+		predictions_event.clear()
 
-	pickle.dump(predictions_dictionary, open( picklepath, 'wb' ) )
 
 def update_Engine(predictions_dictionary, thread_event, termination_event):
 	a = 1
+	while( not termination_event.isSet() ):
+		thread_event.wait()		
+		thread_event.clear()
 
 
 
@@ -176,32 +190,8 @@ def update_Engine(predictions_dictionary, thread_event, termination_event):
 #==========================================================================================================================
 
 def load_trained_model():
-	return(tf.python.keras.models.load_model('/home/pi/Desktop/ChessMate/data/model/best.h5')
-
-
-
-
-
-def store_images(imgs, image_folder, dictionary, 
-		prefix = 'image.', suffix = '.JPG', start_index = 0, zeros = 3):
-	
-	
-	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-
-	for r in range(0, 8):
-		alpha_id = letters[r]
-		for c in range(0, 8):
-			num_id = str(c + 1)
-			position_string = alpha_id + num_id
-
-			filename = image_folder + position_string + suffix
-
-
-			image = imgs[ 63 - (r * 8 + c) ] 
-			cv.imwrite(filename, image)
-
-
-	
+	model = tf.python.keras.models.load_model('/home/pi/Desktop/ChessMate/data/model/best.h5')
+	return(model)
 
 def get_new_predictions(model, imgs):
 
@@ -227,7 +217,7 @@ def initializeWindow(dummyFrame):
 	windowHandle = 'Camera Pipeline'
 	cv.namedWindow(windowHandle, cv.WINDOW_NORMAL)
 	cv.resizeWindow(windowHandle, (320, 240))
-	cv.imshow(windowHandle)
+	cv.imshow(windowHandle, dummyFrame)
 	return(windowHandle)
 
 
