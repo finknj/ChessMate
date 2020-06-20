@@ -111,14 +111,7 @@ def cropimage(img, position, buffer = 20):
 
 	return cropped_image
 
-def updateWindow(img, handle, thread_event, termination_event):	
-	
-	while( not termination_event.isSet() ):
-		thread_event.wait()
-		#cv.resizeWindow( handle, img )	
-		#image = img.array		
-		#cv.imshow( handle, image )						
-		thread_event.clear()
+
 
 #==========================================================================================================================
 #Dictionary Functions
@@ -171,7 +164,7 @@ def update_Chessboard_Dictionary(predictions, predictions_dictionary, prediction
 
 				predictions_dictionary[ position_string ] = prediction_value
 
-				print( position_string + ': ' + str(predictions_dictionary[ position_string] ) )
+				#print( position_string + ': ' + str(predictions_dictionary[ position_string] ) )
 
 		pickle.dump(predictions_dictionary, open( picklepath, 'wb' ) )		
 		predictions_event.clear()
@@ -217,15 +210,38 @@ def initializeWindow(dummyFrame):
 	windowHandle = 'Camera Pipeline'
 	cv.namedWindow(windowHandle, cv.WINDOW_NORMAL)
 	cv.resizeWindow(windowHandle, (320, 240))
-	cv.imshow(windowHandle, dummyFrame)
+
+	image = dummyFrame.array
+
+	image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
+	cv.imshow(windowHandle, image)
 	return(windowHandle)
 
 
 
 
 
+def updateWindow(img, handle, thread_event, termination_event):	
+	
+	while( not termination_event.isSet() ):
+		thread_event.wait()
+		print('Updating Window')
 
+		
+		image = img.array
+		#image = img_pipeline(image)
+		#resized_image = cv.resize( image, (320, 240) )
+		print(image.shape)
 
+		#cv.resizeWindow( handle, resized_image )	
+		
+		cv.imshow( handle, image )
+
+		print('updated window')
+						
+		thread_event.clear()
+
+		print('thread event cleared')
 
 
 

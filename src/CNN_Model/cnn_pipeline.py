@@ -40,10 +40,11 @@ def begin_send_to_engine(threads, predictions_dictionary,termination_event):
 	
 def run_window_display_thread(threads, image,  handle, termination_event):
 	window_thread_event = Event()
+
+
 	threads.append(Thread(target = updateWindow, args = (image, handle, window_thread_event, termination_event, )))
 	threads[-1].start()
 	
-	print('Window Display Thread is Ready')
 
 	return(window_thread_event)
 
@@ -81,11 +82,11 @@ def main():
 	rawCapture = picamera.array.PiRGBArray(camera, size = (1920, 1080) )
 	camera.capture(rawCapture, format = 'bgr')
 
-	image = rawCapture.array
-	windowHandle = initializeWindow( image )
+
+	windowHandle = initializeWindow( rawCapture )
 
 	print('Initializing CNN Model..')
-	model = load_trained_model()
+	#model = load_trained_model()
 
 
 
@@ -94,58 +95,65 @@ def main():
 	calibrationDictionary = load_chessboard_dictionary()		#Holds Position Data for all 64 squares
 
 
-	#imgs = parse_full_image(dummyFrame, calibrationDictionary)
-	#predictions = get_new_predictions(model, imgs)
 	predictions = np.zeros( shape = (64) )	
 
-
 	print('Initializing Worker Threads For Engine Interface')
-	window_display_event = run_window_display_thread(threads, dummyFrame, windowHandle, termination_event)
-	chessboard_engine_event = begin_send_to_engine(threads, chessboardDictionary, termination_event)
-	predictions_file_event = run_predictions_file_thread(threads, predictions, chessboardDictionary, termination_event)
+	window_display_event = run_window_display_thread(threads, rawCapture, windowHandle, termination_event)
+	#chessboard_engine_event = begin_send_to_engine(threads, chessboardDictionary, termination_event)
+	#predictions_file_event = run_predictions_file_thread(threads, predictions, chessboardDictionary, termination_event)
 
-	raw_Capture = picamera.array.PiRGBArray(camera, size = (1920, 1080) )
+
+	rawCapture.truncate(0)
+	#raw_Capture = picamera.array.PiRGBArray(camera, size = (1920, 1080) )
 	
-	time.sleep(1)	#Warm Up Period
+	#time.sleep(1)	#Warm Up Period
 
-	
+	print('\nProgram is ready! Press "r" to execute')
 
-	for frame in camera.capture_continuous(raw_Capture, format = 'bgr', use_video_port = True ):
+	while((cv.waitKey(30) & 0xFF) != ord('r')):	#GADFLY Loop (busy/waiting)
+		rawCapture.truncate(0)
 
-		print('\nProgram is ready! Press "r" to execute')
-		#while((cv.waitKey(30) & 0xFF) != ord('r')): None	#GADFLY Loop (busy/waiting)
+	print('\nProgram is now executing..')
+	while(True):
+		print('ready to capture')
+		
 
+		#if((cv.waitKey(10) & 0xFF) == 27): 
+		#	print('esc key command, exiting program')			
+		#	break		#ESC Key to Escape Runtime 
 
-		print('\nProgram is now executing..')
+		cv.waitKey(0)
+		#while((cv.waitKey(10) & 0xFF) != ord('q')):
+		#	rawCapture.truncate(0)
+		print('Go Go PowerRangers!! (new camera capture)')
+		camera.capture(rawCapture, format = 'bgr')
+		
+		window_display_event.set()
+		time.sleep(1)
 
-		while(True):
-			
-			#Read Camera Frame / Send Image Through Pipeline / Parse Image
+		#READ CAMERA FRAME / SEND IMAGE THROUGH PIPELINE / PARSE IMAGE
 
-			image = frame.array
-
-			print(type( image )) 
-
-			image = img_pipeline(image)
-			imgs = parse_full_image(image, calibrationDictionary)
-
-			#Get CNN Predictions / Update Dictionary
-
-			predictions = get_new_predictions(model, imgs)
-			#update_chessboard_dictionary(predictions, chessboardDictionary)
-
-
-			#Trigger Thread Events
-			
-			window_display_event.set()
-			predictions_file_event.set()
-			chessboard_engine_event.set()
-			
+		frame = rawCapture.array
 
 
-			if((cv.waitKey(1) & 0xFF) == 27): break		#ESC Key to Escape Runtime 
-			
-			image.truncate()
+		frame = img_pipeline(frame)
+		#imgs = parse_full_image(frame, calibrationDictionary)
+
+		#Get CNN Predictions / Update Dictionary
+
+		#predictions = get_new_predictions(model, imgs)
+		#update_chessboard_dictionary(predictions, chessboardDictionary)
+
+
+		#Trigger Thread Events
+		
+		
+		#predictions_file_event.set()
+		#chessboard_engine_event.set()
+		
+
+		
+		rawCapture.truncate(0)
 
 	initiate_shutdown(threads, camera, termination_event)
 
