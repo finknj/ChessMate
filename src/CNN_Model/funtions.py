@@ -155,16 +155,26 @@ def update_Chessboard_Dictionary(predictions, predictions_dictionary, prediction
 
 	while( not termination_event.isSet() ):
 		predictions_event.wait()
+		print('\t1\t2\t3\t4\t5\t6\t7\t8\n\n')
+
 		for r in range(0, 8):
 			alpha_id = letters[r]
+			row_str = alpha_id + '\t'
+			
 			for c in range(0, 8):
 				num_id = str(c + 1)
 				position_string = alpha_id + num_id
 				prediction_value = str( predictions[ r * 8 + c ] )
 
 				predictions_dictionary[ position_string ] = prediction_value
+			
+				row_str += prediction_value + '\t'			
 
 				#print( position_string + ': ' + str(predictions_dictionary[ position_string] ) )
+
+			print(row_str)
+
+
 
 		pickle.dump(predictions_dictionary, open( picklepath, 'wb' ) )		
 		predictions_event.clear()
@@ -207,7 +217,7 @@ def get_new_predictions(model, imgs):
 #==========================================================================================================================
 
 def initializeWindow(dummyFrame):
-	windowHandle = 'Camera Pipeline'
+	windowHandle = "CameraPipeline"
 	cv.namedWindow(windowHandle, cv.WINDOW_NORMAL)
 	cv.resizeWindow(windowHandle, (320, 240))
 
@@ -226,22 +236,29 @@ def updateWindow(img, handle, thread_event, termination_event):
 	while( not termination_event.isSet() ):
 		thread_event.wait()
 		print('Updating Window')
-
 		
-		image = img.array
-		#image = img_pipeline(image)
-		#resized_image = cv.resize( image, (320, 240) )
-		print(image.shape)
-
-		#cv.resizeWindow( handle, resized_image )	
+		#cv.destroyAllWindows()
+		#cv.namedWindow(handle, cv.WINDOW_NORMAL)
+		#cv.resizeWindow(handle, (320, 240))
 		
-		cv.imshow( handle, image )
+		image = np.copy(img.array)
 
-		print('updated window')
+		image = img_pipeline(image)
+		#image = cv.resize(image, (320, 240))
+
+		cv.imwrite( CWD + 'UPDATE_2.JPG', image)
+
+
+
+		#img = cv.imread( '/home/pi/Desktop/ChessMate/data/test_images/test_image0.JPG')
+		
+		#img = cv.resize(img, (320, 240))
+
+		#cv.imshow(handle, img )
 						
+		#time.sleep(2)
 		thread_event.clear()
 
-		print('thread event cleared')
 
 
 

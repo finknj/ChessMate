@@ -19,6 +19,11 @@ config.gpu_options.per_process_gpu_memory_fraction = 0.6
 session = tf.compat.v1.Session(config = config)
 
 
+GADFLY_LOOP = False
+RUNNING_CAMERA = False
+
+
+
 def run_predictions_file_thread(threads, predictions, predictions_dictionary, termination_event):
 	predictions_thread_event = Event()
 	threads.append(Thread(target = update_Chessboard_Dictionary, args = (predictions, predictions_dictionary, predictions_thread_event, termination_event, )))
@@ -64,7 +69,8 @@ def initiate_shutdown(threads, camera, termination_event):
 	print('Initiating Shutdown..')
 	
 	join_threads(threads, termination_event)
-	terminate_camera(camera)
+	cv.destroyAllWindows()
+	camera.close()
 	session.close()
 
 def main():
@@ -75,7 +81,6 @@ def main():
 	frame_index = 0
 
 	print('Initiailizing Camera')
-	#image = np.empty( shape = (1920, 1080, 3) )
 	
 	camera, dummyFrame = initialize_camera()
 
@@ -86,7 +91,7 @@ def main():
 	windowHandle = initializeWindow( rawCapture )
 
 	print('Initializing CNN Model..')
-	#model = load_trained_model()
+	model = load_trained_model()
 
 
 
@@ -99,37 +104,47 @@ def main():
 
 	print('Initializing Worker Threads For Engine Interface')
 	window_display_event = run_window_display_thread(threads, rawCapture, windowHandle, termination_event)
-	#chessboard_engine_event = begin_send_to_engine(threads, chessboardDictionary, termination_event)
-	#predictions_file_event = run_predictions_file_thread(threads, predictions, chessboardDictionary, termination_event)
+	chessboard_engine_event = begin_send_to_engine(threads, chessboardDictionary, termination_event)
+	predictions_file_event = run_predictions_file_thread(threads, predictions, chessboardDictionary, termination_event)
 
 
 	rawCapture.truncate(0)
-	#raw_Capture = picamera.array.PiRGBArray(camera, size = (1920, 1080) )
-	
-	#time.sleep(1)	#Warm Up Period
+
 
 	print('\nProgram is ready! Press "r" to execute')
 
 	while((cv.waitKey(30) & 0xFF) != ord('r')):	#GADFLY Loop (busy/waiting)
 		rawCapture.truncate(0)
 
+
+
 	print('\nProgram is now executing..')
-	while(True):
+	RUNNING_CAMERA = True
+
+	while(RUNNING_CAMERA):
 		print('ready to capture')
-		
+		GADFLY_LOOP = True
 
-		#if((cv.waitKey(10) & 0xFF) == 27): 
-		#	print('esc key command, exiting program')			
-		#	break		#ESC Key to Escape Runtime 
+		while(GADFLY_LOOP):		#Gadfly Loop
 
-		cv.waitKey(0)
-		#while((cv.waitKey(10) & 0xFF) != ord('q')):
-		#	rawCapture.truncate(0)
+			key_event = (cv.waitKey(10) & 0xFF)
+			if(key_event == ord('q')):
+				print('esc key command, exiting program')			
+				RUNNING_CAMERA = False
+				GADFLY_LOOP = False
+				
+
+			elif(key_event == ord('c')):
+				rawCapture.truncate(0)
+				GADFLY_LOOP = False
+
+
+
 		print('Go Go PowerRangers!! (new camera capture)')
 		camera.capture(rawCapture, format = 'bgr')
 		
-		window_display_event.set()
-		time.sleep(1)
+		
+
 
 		#READ CAMERA FRAME / SEND IMAGE THROUGH PIPELINE / PARSE IMAGE
 
@@ -137,22 +152,22 @@ def main():
 
 
 		frame = img_pipeline(frame)
-		#imgs = parse_full_image(frame, calibrationDictionary)
+		cv.imwrite('/home/pi/Desktop/ChessMate/frame.JPG')
+		imgs = parse_full_image(frame, calibrationDictionary)
 
 		#Get CNN Predictions / Update Dictionary
 
-		#predictions = get_new_predictions(model, imgs)
-		#update_chessboard_dictionary(predictions, chessboardDictionary)
+		predictions = get_new_predictions(model, imgs)
+
 
 
 		#Trigger Thread Events
 		
+		window_display_event.set()
+		predictions_file_event.set()
+		chessboard_engine_event.set()
 		
-		#predictions_file_event.set()
-		#chessboard_engine_event.set()
-		
-
-		
+		rawCapture.seek(0)
 		rawCapture.truncate(0)
 
 	initiate_shutdown(threads, camera, termination_event)
