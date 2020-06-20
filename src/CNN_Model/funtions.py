@@ -153,9 +153,13 @@ def update_Chessboard_Dictionary(predictions, predictions_dictionary, prediction
 
 	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 
+
 	while( not termination_event.isSet() ):
 		predictions_event.wait()
 		print('\t1\t2\t3\t4\t5\t6\t7\t8\n\n')
+
+		if(len(predictions) <= 62 ):
+			print("fuck")
 
 		for r in range(0, 8):
 			alpha_id = letters[r]
@@ -199,7 +203,7 @@ def load_trained_model():
 def get_new_predictions(model, imgs):
 
 
-	predictions = []
+	new_predictions = []
 
 	confidenceLevels = []
 
@@ -207,10 +211,10 @@ def get_new_predictions(model, imgs):
 		for c in range(0, 8):
 			image = imgs[ 63 - (r * 8 + c) ] 
 			prediction = model.predict( image[None, :, :, : ])[0]
-			predictions.append(np.argmax( prediction ) )
+			new_predictions.append(np.argmax( prediction ) )
 			confidenceLevels.append( prediction )
 
-	return( predictions, confidenceLevels ) 
+	return( new_predictions, confidenceLevels ) 
 	
 #==========================================================================================================================
 #MISC Functions

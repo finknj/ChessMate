@@ -95,12 +95,19 @@ def main():
 
 
 
+
+
 	print('Initializing Chessboard Dictionaries')
 	chessboardDictionary = create_Chessboard_Dictionary()		#Holds the Current Prediction of all 64 squares
 	calibrationDictionary = load_chessboard_dictionary()		#Holds Position Data for all 64 squares
 
 
-	predictions = np.zeros( shape = (64) )	
+
+	images = parse_full_image(rawCapture.array, calibrationDictionary)
+	predictions = get_new_predictions(model, images)
+
+
+	#predictions = [] #np.zeros( shape = (64) )	
 
 	print('Initializing Worker Threads For Engine Interface')
 	window_display_event = run_window_display_thread(threads, rawCapture, windowHandle, termination_event)
@@ -152,20 +159,29 @@ def main():
 
 
 		frame = img_pipeline(frame)
-		cv.imwrite('/home/pi/Desktop/ChessMate/frame.JPG')
+		cv.imwrite('/home/pi/Desktop/ChessMate/frame.JPG', frame)
 		imgs = parse_full_image(frame, calibrationDictionary)
 
 		#Get CNN Predictions / Update Dictionary
 
-		predictions = get_new_predictions(model, imgs)
+		predictions, _ = get_new_predictions(model, imgs)
+		
+		print(len(predictions))
+		time.sleep(1)
 
 
 
 		#Trigger Thread Events
 		
+
 		window_display_event.set()
+		time.sleep(1)
+
 		predictions_file_event.set()
+		time.sleep(1)
+
 		chessboard_engine_event.set()
+		time.sleep(1)
 		
 		rawCapture.seek(0)
 		rawCapture.truncate(0)
