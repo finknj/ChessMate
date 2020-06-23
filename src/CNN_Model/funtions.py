@@ -156,10 +156,10 @@ def update_Chessboard_Dictionary(predictions, predictions_dictionary, prediction
 
 	while( not termination_event.isSet() ):
 		predictions_event.wait()
-		print('\t1\t2\t3\t4\t5\t6\t7\t8\n\n')
 
-		if(len(predictions) <= 62 ):
-			print("fuck")
+		print('predictions in update_Chessboard_Dictionary', predictions)		
+
+		print('\t1\t2\t3\t4\t5\t6\t7\t8\n\n')
 
 		for r in range(0, 8):
 			alpha_id = letters[r]
@@ -168,14 +168,14 @@ def update_Chessboard_Dictionary(predictions, predictions_dictionary, prediction
 			for c in range(0, 8):
 				num_id = str(c + 1)
 				position_string = alpha_id + num_id
-				prediction_value = str( predictions[ r * 8 + c ] )
+
+				prediction_value = str(predictions[ r * 8 + c ])
 
 				predictions_dictionary[ position_string ] = prediction_value
 			
 				row_str += prediction_value + '\t'			
 
-				#print( position_string + ': ' + str(predictions_dictionary[ position_string] ) )
-
+				
 			print(row_str)
 
 
@@ -205,16 +205,22 @@ def get_new_predictions(model, imgs):
 
 	new_predictions = []
 
-	confidenceLevels = []
+	#confidenceLevels = []
 
 	for r in range(0, 8):
 		for c in range(0, 8):
 			image = imgs[ 63 - (r * 8 + c) ] 
 			prediction = model.predict( image[None, :, :, : ])[0]
 			new_predictions.append(np.argmax( prediction ) )
-			confidenceLevels.append( prediction )
+			#confidenceLevels.append( prediction )
+				
+	print('Last Prediction value ', prediction )
+	print('Print length of new predictions: ' , len(new_predictions))
 
-	return( new_predictions, confidenceLevels ) 
+	print('Prediction Values from get_new_predictins: ', new_predictions)
+	print('Type of prediction array ', type(new_predictions))
+	
+	return( new_predictions ) 
 	
 #==========================================================================================================================
 #MISC Functions

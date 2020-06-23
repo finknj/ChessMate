@@ -9,23 +9,28 @@ from funtions import *
 from threading import Event, Thread, _after_fork
 
 warnings.filterwarnings('ignore')
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 tf.compat.v1.disable_eager_execution()
 tf.compat.v1.keras.backend.clear_session()
 config = tf.compat.v1.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.6
+config.gpu_options.per_process_gpu_memory_fraction = 0.5
 session = tf.compat.v1.Session(config = config)
 
 
 GADFLY_LOOP = False
 RUNNING_CAMERA = False
 
+predictions = []
 
 
-def run_predictions_file_thread(threads, predictions, predictions_dictionary, termination_event):
+
+def run_predictions_file_thread(threads, predictions_args, predictions_dictionary, termination_event):
 	predictions_thread_event = Event()
+
+	global predictions
+
 	threads.append(Thread(target = update_Chessboard_Dictionary, args = (predictions, predictions_dictionary, predictions_thread_event, termination_event, )))
 	threads[-1].start()
 	
@@ -73,9 +78,12 @@ def initiate_shutdown(threads, camera, termination_event):
 	camera.close()
 	session.close()
 
+
+
 def main():
 
 	threads = []
+	
 	initial_time = 0
 	termination_event = Event()
 	frame_index = 0
@@ -101,15 +109,15 @@ def main():
 	chessboardDictionary = create_Chessboard_Dictionary()		#Holds the Current Prediction of all 64 squares
 	calibrationDictionary = load_chessboard_dictionary()		#Holds Position Data for all 64 squares
 
-
+	global predictions
 
 	images = parse_full_image(rawCapture.array, calibrationDictionary)
 	predictions = get_new_predictions(model, images)
-
-
-	#predictions = [] #np.zeros( shape = (64) )	
+	print(type(predictions))
+	
 
 	print('Initializing Worker Threads For Engine Interface')
+
 	window_display_event = run_window_display_thread(threads, rawCapture, windowHandle, termination_event)
 	chessboard_engine_event = begin_send_to_engine(threads, chessboardDictionary, termination_event)
 	predictions_file_event = run_predictions_file_thread(threads, predictions, chessboardDictionary, termination_event)
@@ -146,45 +154,51 @@ def main():
 				GADFLY_LOOP = False
 
 
-
-		print('Go Go PowerRangers!! (new camera capture)')
-		camera.capture(rawCapture, format = 'bgr')
-		
-		
-
-
-		#READ CAMERA FRAME / SEND IMAGE THROUGH PIPELINE / PARSE IMAGE
-
-		frame = rawCapture.array
+		if(RUNNING_CAMERA):
+				
+			print('Go Go PowerRangers!! (new camera capture)')
+			camera.capture(rawCapture, format = 'bgr')
+			
+			
 
 
-		frame = img_pipeline(frame)
-		cv.imwrite('/home/pi/Desktop/ChessMate/frame.JPG', frame)
-		imgs = parse_full_image(frame, calibrationDictionary)
+			#READ CAMERA FRAME / SEND IMAGE THROUGH PIPELINE / PARSE IMAGE
 
-		#Get CNN Predictions / Update Dictionary
-
-		predictions, _ = get_new_predictions(model, imgs)
-		
-		print(len(predictions))
-		time.sleep(1)
+			frame = rawCapture.array
 
 
+			frame = img_pipeline(frame)
+			cv.imwrite('/home/pi/Desktop/ChessMate/frame.JPG', frame)
+			imgs = parse_full_image(frame, calibrationDictionary)
 
-		#Trigger Thread Events
-		
+			#Get CNN Predictions / Update Dictionary
 
-		window_display_event.set()
-		time.sleep(1)
+			
+			
+			predictions_array = get_new_predictions(model, imgs)
+			
+			print('predictions in main: ', predictions_array)
 
-		predictions_file_event.set()
-		time.sleep(1)
+			predictions = np.copy( predictions_array )
+			print('predictions again: ' , predictions)
+			time.sleep(1)
 
-		chessboard_engine_event.set()
-		time.sleep(1)
-		
-		rawCapture.seek(0)
-		rawCapture.truncate(0)
+
+
+			#Trigger Thread Events
+			
+
+			window_display_event.set()
+			time.sleep(1)
+
+			predictions_file_event.set()
+			time.sleep(1)
+
+			chessboard_engine_event.set()
+			time.sleep(1)
+			
+			rawCapture.seek(0)
+			rawCapture.truncate(0)
 
 	initiate_shutdown(threads, camera, termination_event)
 
