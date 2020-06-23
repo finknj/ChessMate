@@ -30,6 +30,7 @@ session = tf.compat.v1.Session(config = config)
 CWD = '/home/pi/Desktop/ChessMate/'
 modelPath = CWD + 'data/model/best.h5'
 testPath = CWD + 'data/test/'
+fen_text_path = CWD + 'FEN.txt'
 
 picklepath = CWD + 'data/pickle/calibration_pickle.p'
 picklepath_chessboard = CWD + 'data/pickle/chessboard_pickle.p'
@@ -40,6 +41,26 @@ classifications = ["blue_bishop\\", "blue_king\\", "blue_knight\\", "blue_pawn\\
 
 IMAGE_SIZE = 128
 
+
+
+#==========================================================================================================================
+#FILE POINTER CLASS
+#==================================================================================================================
+class FileObject():
+	def __init__(self, filepath = fen_text_path):
+		self.filepath = filepath
+	
+	def _open_file(self):
+		self.file = open(self.filepath, 'w+')  # 'W+' OVERWRITES OR CREATES NEW FILE
+
+	def _close_file(self):
+		self.file.close()
+
+	def writeToFile(self, line_list, open = False, close = False):
+		if(open == True): self._open_file()
+		self.file.writelines(line_list)
+		if(close == True): self._close_file()
+
 #==========================================================================================================================
 #CAMERA PIPELINE FUNCTIONS
 #==========================================================================================================================
@@ -49,9 +70,6 @@ def initialize_camera():
 	camera.resolution = (1920, 1080)
 	dummyFrame = picamera.array.PiRGBArray(camera, size = (1920, 1080) )
 
-	#dummyImage = img_pipeline(dummyFrame.array)
-	#dummyImage = cv.resize(dummyImage, (320, 240))
-	
 	return(camera, dummyFrame)
 
 
@@ -146,51 +164,6 @@ def create_Chessboard_Dictionary(picklepath = picklepath_chessboard):
 
 
 
-#Updates to reflect predictions of each tile
-
-def update_Chessboard_Dictionary(predictions, predictions_dictionary, predictions_event, 
-					termination_event, picklepath = picklepath_chessboard):
-
-	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-
-
-	while( not termination_event.isSet() ):
-		predictions_event.wait()
-
-		print('predictions in update_Chessboard_Dictionary', predictions)		
-
-		print('\t1\t2\t3\t4\t5\t6\t7\t8\n\n')
-
-		for r in range(0, 8):
-			alpha_id = letters[r]
-			row_str = alpha_id + '\t'
-			
-			for c in range(0, 8):
-				num_id = str(c + 1)
-				position_string = alpha_id + num_id
-
-				prediction_value = str(predictions[ r * 8 + c ])
-
-				predictions_dictionary[ position_string ] = prediction_value
-			
-				row_str += prediction_value + '\t'			
-
-				
-			print(row_str)
-
-
-
-		pickle.dump(predictions_dictionary, open( picklepath, 'wb' ) )		
-		predictions_event.clear()
-
-
-def update_Engine(predictions_dictionary, thread_event, termination_event):
-	a = 1
-	while( not termination_event.isSet() ):
-		thread_event.wait()		
-		thread_event.clear()
-
-
 
 #==========================================================================================================================
 #CNN Model Functions
@@ -200,27 +173,111 @@ def load_trained_model():
 	model = tf.python.keras.models.load_model('/home/pi/Desktop/ChessMate/data/model/best.h5')
 	return(model)
 
-def get_new_predictions(model, imgs):
+
+def set_predictions_dictionary(predictions, predictions_dictionary):
+
+	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+
+	print('\t1\t2\t3\t4\t5\t6\t7\t8\n\n')
+
+	for r in range(0, 8):
+		alpha_id = letters[r]
+		row_str = alpha_id + '\t'
+		
+		for c in range(0, 8):
+			num_id = str(c + 1)
+			position_string = alpha_id + num_id
+
+			prediction_value = str(predictions[ r * 8 + c ])
+
+			predictions_dictionary[ position_string ] = prediction_value
+		
+			row_str += prediction_value + '\t'			
+
+			
+		print(row_str)
+
+def get_new_predictions(model, imgs, predictions_dictionary):
 
 
 	new_predictions = []
-
-	#confidenceLevels = []
 
 	for r in range(0, 8):
 		for c in range(0, 8):
 			image = imgs[ 63 - (r * 8 + c) ] 
 			prediction = model.predict( image[None, :, :, : ])[0]
 			new_predictions.append(np.argmax( prediction ) )
-			#confidenceLevels.append( prediction )
-				
-	print('Last Prediction value ', prediction )
-	print('Print length of new predictions: ' , len(new_predictions))
 
-	print('Prediction Values from get_new_predictins: ', new_predictions)
-	print('Type of prediction array ', type(new_predictions))
-	
+
+	set_predictions_dictionary( new_predictions, predictions_dictionary )
+
 	return( new_predictions ) 
+
+
+#==========================================================================================================================
+#FEN NOTATION
+#=================================================================================================================
+
+#UPDATE PREDICTIONS DICTIONARY // API CALL
+def update_FEN(next_move, predictions_dictionary, predictions_event, termination_event, filepath = fen_text_path):
+	
+	file = FileObject( filepath = filepath )
+	
+	while( not termination_event.isSet() ):
+		thread_event.wait()	
+		line_list = dictionary_to_text(predictions_dictionary)
+		file.write_to_file(line_list, open = True, close = True)
+
+		#pickle.dump(predictions_dictionary, open( picklepath_chessboard, 'wb' ) )	
+
+		thread_event.clear()
+
+
+
+def dictionary_to_text(predictions_dictionary):
+	
+	piece_pairings = ['b', 'k', 'n', 'p', 'q', 'r', 'u', 'B', 'K', 'N','P', 'Q', 'R']
+	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+ 
+
+	for r in range(8, 0):
+		
+		num_id = str(r)
+		empty_space_loop = False
+		empty_space_count = 0
+		
+		for c in range(0, 8):
+
+			alpha_id = letters[c]
+	
+			position_string = alpha_id + num_id
+			value_key_index = predictions_dictionary.get( position_string, '-1' )
+			print(type(value_key_index))
+			if(value_key_index != 6):  #IF not an empty space
+				if(empty_space_loop == True): 
+					fen_string += str(empty_space_count)
+					empty_space_count = 0
+					empty_space_loop = False
+
+				fen_string += piece_pairings[ value_key_index ]
+				
+
+			else:  #LOOP Through empty spaces
+
+				empty_space_count += 1
+				if(alpha_id == 'h'): fen_string += str(empty_space_count)
+					
+				
+
+
+		if(r != 1): fen_string += '/'
+
+		else: fen_string += ' b'
+
+
+	print(fen_string)
+	return(fen_string)
+
 	
 #==========================================================================================================================
 #MISC Functions
@@ -251,12 +308,12 @@ def updateWindow(img, handle, thread_event, termination_event):
 		#cv.namedWindow(handle, cv.WINDOW_NORMAL)
 		#cv.resizeWindow(handle, (320, 240))
 		
-		image = np.copy(img.array)
+		#image = np.copy(img.array)
 
-		image = img_pipeline(image)
+		#image = img_pipeline(image)
 		#image = cv.resize(image, (320, 240))
 
-		cv.imwrite( CWD + 'UPDATE_2.JPG', image)
+		#cv.imwrite( CWD + 'UPDATE_2.JPG', image)
 
 
 
