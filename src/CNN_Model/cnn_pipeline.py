@@ -128,12 +128,12 @@ def main():
 
 
 	while(RUNNING_CAMERA):
-		print('ready to capture')
+		print('space to make move; q to quit')
 		GADFLY_LOOP = True
 
 		while(GADFLY_LOOP):		#Gadfly Loop
 
-			print('space to make move; q to quit')
+		
 
 			key_event = (cv.waitKey(10) & 0xFF)
 			if(key_event == ord('q')):
@@ -143,6 +143,7 @@ def main():
 				
 
 			elif(key_event == ord(' ')):
+				print('space key BOOM!')
 				rawCapture.truncate(0)
 				GADFLY_LOOP = False
 
@@ -167,15 +168,15 @@ def main():
 
 			time.sleep(1)
 
-
+			
 
 			#THREAD EVENTS
 		
 
 			chessboard_engine_event.set()	
-
+			time.sleep(1)
 			window_display_event.set()
-			#time.sleep(1)
+			time.sleep(1)
 			
 			#rawCapture.seek(0)
 			rawCapture.truncate(0)

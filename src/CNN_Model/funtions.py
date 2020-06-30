@@ -224,13 +224,14 @@ def update_FEN(next_move, predictions_dictionary, predictions_event, termination
 	file = FileObject( filepath = filepath )
 	
 	while( not termination_event.isSet() ):
-		thread_event.wait()	
+		predictions_event.wait()
+		print('Updating FEN notation')	
 		line_list = dictionary_to_text(predictions_dictionary)
-		file.write_to_file(line_list, open = True, close = True)
+		file.writeToFile(line_list, open = True, close = True)
 
 		#pickle.dump(predictions_dictionary, open( picklepath_chessboard, 'wb' ) )	
-
-		thread_event.clear()
+		print('FEN Updated')
+		predictions_event.clear()
 
 
 
@@ -238,9 +239,9 @@ def dictionary_to_text(predictions_dictionary):
 	
 	piece_pairings = ['b', 'k', 'n', 'p', 'q', 'r', 'u', 'B', 'K', 'N','P', 'Q', 'R']
 	letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
- 
+	fen_string = ""
 
-	for r in range(8, 0):
+	for r in range(8, 0, -1):
 		
 		num_id = str(r)
 		empty_space_loop = False
@@ -251,19 +252,19 @@ def dictionary_to_text(predictions_dictionary):
 			alpha_id = letters[c]
 	
 			position_string = alpha_id + num_id
-			value_key_index = predictions_dictionary.get( position_string, '-1' )
-			print(type(value_key_index))
+			value_key_index = int(predictions_dictionary.get( position_string, '-1' ))
 			if(value_key_index != 6):  #IF not an empty space
+								
 				if(empty_space_loop == True): 
 					fen_string += str(empty_space_count)
 					empty_space_count = 0
 					empty_space_loop = False
 
-				fen_string += piece_pairings[ value_key_index ]
+				fen_string += str(piece_pairings[ value_key_index ])
 				
 
 			else:  #LOOP Through empty spaces
-
+				empty_space_loop = True
 				empty_space_count += 1
 				if(alpha_id == 'h'): fen_string += str(empty_space_count)
 					
@@ -275,7 +276,7 @@ def dictionary_to_text(predictions_dictionary):
 		else: fen_string += ' b'
 
 
-	print(fen_string)
+	print('FEN String: ' , fen_string)
 	return(fen_string)
 
 	
