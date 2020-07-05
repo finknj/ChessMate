@@ -1,3 +1,4 @@
+#TEST
 import numpy as np
 import cv2 as cv
 import os
@@ -8,6 +9,8 @@ import pickle
 import tensorflow as tf
 import warnings
 
+
+from Main_Software.RobotControl import *
 from threading import Event, Thread, _after_fork
 from tensorflow.python.util import deprecation
 
@@ -279,7 +282,20 @@ def dictionary_to_text(predictions_dictionary):
 	print('FEN String: ' , fen_string)
 	return(fen_string)
 
+#==========================================================================================================================
+#ARM CONTROL FUNCTIONS
+#==========================================================================================================================
+## ARM STUFF
+def arm(chessboardDictionary, next_move, arm_control_event, termination_event):
+	RC = RobotControl()
+	RC.import_chessboard_dic(chessboardDictionary)
 	
+	while(not termination_event.isSet()):
+		arm_control_event.wait()
+		RC.move_command(next_move)	#NOTATION: ["PRESENT STATE", "NEXT STATE"]
+		arm_control_event.clear()
+
+
 #==========================================================================================================================
 #MISC Functions
 #==========================================================================================================================

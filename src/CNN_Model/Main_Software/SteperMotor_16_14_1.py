@@ -1,5 +1,5 @@
 # This file will mimic the stepper motors
-import Parameters as p
+from . import Parameters as p
 from time import sleep
 #import RPi.GPIO as GPIO
 

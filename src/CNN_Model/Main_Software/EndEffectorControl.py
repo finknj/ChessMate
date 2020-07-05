@@ -1,5 +1,5 @@
 #End Effector
-import Parameters as p
+from . import Parameters as p
 from time import sleep
 import math
 #import RPi.GPIO as GPIO

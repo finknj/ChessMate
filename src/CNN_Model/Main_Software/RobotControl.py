@@ -1,6 +1,6 @@
-from MotorControl import MotorControl
-from EndEffectorControl import EndEffectorControl
-import Parameters as p
+from .MotorControl import MotorControl
+from .EndEffectorControl import EndEffectorControl
+from . import Parameters as p
 import time
 
 
@@ -88,7 +88,7 @@ class RobotControl:
             self.EE.set_magnet(0)
             #raise ee
             self.EE.set_elevation("top")
-            
+        
         print("Chess Move: ",self.initialType," (",self.initialPos,") to (",self.finalPos,")")
         #get initial pos coord
         goCoord = p.get_square_coord(self.initialPos)
@@ -120,6 +120,6 @@ class RobotControl:
 
 
 # example run 
-RC = RobotControl()
+#RC = RobotControl()
 #RC.import_chessboard_dic(chessboard_in)
-RC.move_command(["a1","h8"])
+#RC.move_command(["a1","h8"])

@@ -1,5 +1,5 @@
-from SteperMotor_16_14_1 import StepperMotor_16_14_1
-import Parameters as p
+from .SteperMotor_16_14_1 import StepperMotor_16_14_1
+from . import Parameters as p
 import math
 from threading import Thread
 import time

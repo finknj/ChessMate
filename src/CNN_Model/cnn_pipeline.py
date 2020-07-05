@@ -1,3 +1,4 @@
+#TEST
 import numpy as np
 import cv2 as cv
 import os
@@ -6,6 +7,7 @@ import pickle
 import warnings
 
 from funtions import *
+
 from threading import Event, Thread, _after_fork
 
 warnings.filterwarnings('ignore')
@@ -54,6 +56,14 @@ def initialize_window_display_thread(threads, image,  handle, termination_event)
 	
 
 	return(window_thread_event)
+
+def initialize_arm_control_thread(threads, chessboardDictionary, next_move, termination_event):
+	arm_control_event = Event()
+
+	threads.append(Thread(target = arm, args = (chessboardDictionary, next_move, arm_control_event, termination_event, )))
+	threads[-1].start()
+
+	return(arm_control_event)
 
 
 def join_threads(threads, termination_event):
@@ -110,6 +120,7 @@ def main():
 
 	window_display_event = initialize_window_display_thread(threads, rawCapture, windowHandle, termination_event)
 	chessboard_engine_event =  initialize_main_driver_thread(threads, next_move, chessboardDictionary, termination_event)
+	arm_event = initialize_arm_control_thread(threads, chessboardDictionary, next_move, termination_event)
 	
 	#predictions_file_event = run_predictions_file_thread(threads, chessboardDictionary, termination_event)
 
