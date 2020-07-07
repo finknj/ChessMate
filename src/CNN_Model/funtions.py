@@ -8,8 +8,10 @@ import time
 import pickle
 import tensorflow as tf
 import warnings
+import chess
+import chess.engine
 
-
+from stockfish import Stockfish
 from Main_Software.RobotControl import *
 from threading import Event, Thread, _after_fork
 from tensorflow.python.util import deprecation
@@ -224,16 +226,31 @@ def get_new_predictions(model, imgs, predictions_dictionary):
 #UPDATE PREDICTIONS DICTIONARY // API CALL
 def update_FEN(next_move, predictions_dictionary, predictions_event, termination_event, filepath = fen_text_path):
 	
+	board = chess.Board()
+
+	#stockfish = Stockfish
+
 	file = FileObject( filepath = filepath )
-	
+	engine = chess.engine.SimpleEngine.popen_uci('/usr/local/lib/python3.7/dist-packages/stockfish-3.10.1.dist-info')
 	while( not termination_event.isSet() ):
 		predictions_event.wait()
 		print('Updating FEN notation')	
 		line_list = dictionary_to_text(predictions_dictionary)
-		file.writeToFile(line_list, open = True, close = True)
+
+		board = chess.Board(line_list)
+
+		move = chess.engine.EngineProtocol.play(board)
+
+		#file.writeToFile(line_list, open = True, close = True)
 
 		#pickle.dump(predictions_dictionary, open( picklepath_chessboard, 'wb' ) )	
-		print('FEN Updated')
+
+		#stockfish.is_move_correct('a2a4')
+
+		#stockfish.set_fen_position(line_list)
+		#best_move = stockfish.get_best_move()
+		print('Best Move: ', best_move)
+
 		predictions_event.clear()
 
 

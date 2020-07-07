@@ -92,7 +92,7 @@ def main():
 	threads = []
 	termination_event = Event()
 	RUNNING_CAMERA = True
-	next_move = "" 
+	next_move = ""
 
 
 	print('Initiailizing Camera')
