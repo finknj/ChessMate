@@ -10,8 +10,8 @@ import tensorflow as tf
 import warnings
 import chess
 import chess.engine
+import asyncio
 
-from stockfish import Stockfish
 from Main_Software.RobotControl import *
 from threading import Event, Thread, _after_fork
 from tensorflow.python.util import deprecation
@@ -27,7 +27,7 @@ deprecation._PRINT_DEPRECATION_WARNINGS = False
 tf.compat.v1.disable_eager_execution()
 tf.compat.v1.keras.backend.clear_session()
 config = tf.compat.v1.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.6
+config.gpu_options.per_process_gpu_memory_fraction = 0.7
 session = tf.compat.v1.Session(config = config)
 
 #==========================================================================================================================
@@ -65,6 +65,13 @@ class FileObject():
 		if(open == True): self._open_file()
 		self.file.writelines(line_list)
 		if(close == True): self._close_file()
+	
+def readNextMove(filepath = fen_text_path):
+
+	f = open(fen_text_path, 'r')
+	result = f.readline()
+	f.close()
+	return(result)
 
 #==========================================================================================================================
 #CAMERA PIPELINE FUNCTIONS
@@ -223,35 +230,40 @@ def get_new_predictions(model, imgs, predictions_dictionary):
 #FEN NOTATION
 #=================================================================================================================
 
+
+async def getEngineResults(board):
+	transport, engine = await chess.engine.popen_uci('stockfish')
+	result = await engine.play(board, chess.engine.Limit(time = 2))
+	await engine.quit()
+	return result.move
+
+
 #UPDATE PREDICTIONS DICTIONARY // API CALL
 def update_FEN(next_move, predictions_dictionary, predictions_event, termination_event, filepath = fen_text_path):
 	
+	
 	board = chess.Board()
 
-	#stockfish = Stockfish
-
 	file = FileObject( filepath = filepath )
-	engine = chess.engine.SimpleEngine.popen_uci('/usr/local/lib/python3.7/dist-packages/stockfish-3.10.1.dist-info')
+	
 	while( not termination_event.isSet() ):
 		predictions_event.wait()
 		print('Updating FEN notation')	
 		line_list = dictionary_to_text(predictions_dictionary)
 
 		board = chess.Board(line_list)
+		asyncio.set_event_loop_policy(chess.engine.EventLoopPolicy())
+		result = asyncio.run(getEngineResults(board))
+		result = str(result)
+		next_move = [result[0:2], result[2:4]]
+		
 
-		move = chess.engine.EngineProtocol.play(board)
+		file.writeToFile(result, open = True, close = True)
 
-		#file.writeToFile(line_list, open = True, close = True)
-
-		#pickle.dump(predictions_dictionary, open( picklepath_chessboard, 'wb' ) )	
-
-		#stockfish.is_move_correct('a2a4')
-
-		#stockfish.set_fen_position(line_list)
-		#best_move = stockfish.get_best_move()
-		print('Best Move: ', best_move)
+		print('Best Move: ', next_move)
 
 		predictions_event.clear()
+
 
 
 
@@ -309,7 +321,10 @@ def arm(chessboardDictionary, next_move, arm_control_event, termination_event):
 	
 	while(not termination_event.isSet()):
 		arm_control_event.wait()
-		RC.move_command(next_move)	#NOTATION: ["PRESENT STATE", "NEXT STATE"]
+		result = readNextMove()
+		Move = [result[0:2], result[2:4]]
+		print('Arm Stuff: ', Move)
+		RC.move_command(Move)	#NOTATION: ["PRESENT STATE", "NEXT STATE"]
 		arm_control_event.clear()
 
 

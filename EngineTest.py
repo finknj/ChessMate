@@ -7,22 +7,17 @@ import asyncio
 CWD = '/home/pi/Desktop/ChessMate'
 FEN = '8/2k5/r7/8/8/8/3PPP2/3K4 b'
 
-async def main():
-	
+
+async def getEngineResults(board):
 	transport, engine = await chess.engine.popen_uci('stockfish')
-	board = chess.Board(FEN)
-	
-
-	while not board.is_game_over():
-		result = await engine.play(board, chess.engine.Limit(time=2))
-		board.push(result.move)
-		print(result)
-		break
-		
-
+	result = await engine.play(board, chess.engine.Limit(time = 2))
 	await engine.quit()
+	return result.move
 
 
 
-asyncio.set_event_loop_policy(chess.engine.EventLoopPolicy())
-asyncio.run(main())
+board = chess.Board(FEN)
+result = asyncio.run(getEngineResults(board))
+
+
+print('passed result: ' , result)

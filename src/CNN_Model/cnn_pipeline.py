@@ -92,7 +92,7 @@ def main():
 	threads = []
 	termination_event = Event()
 	RUNNING_CAMERA = True
-	next_move = ""
+	next_move = ['g1', 'h2']
 
 
 	print('Initiailizing Camera')
@@ -184,11 +184,21 @@ def main():
 			#THREAD EVENTS
 		
 
-			chessboard_engine_event.set()	
-			time.sleep(1)
-			window_display_event.set()
-			time.sleep(1)
+			chessboard_engine_event.set()
+
+			time.sleep(2)
+
+
+			result = readNextMove()
+			next_move = [result[0:2], result[2:4]]
+			print('under engine event: ', next_move)
 			
+
+			window_display_event.set()
+			time.sleep(2)
+			arm_event.set()
+			time.sleep(2)
+
 			#rawCapture.seek(0)
 			rawCapture.truncate(0)
 
