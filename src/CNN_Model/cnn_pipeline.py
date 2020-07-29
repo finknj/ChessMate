@@ -94,6 +94,10 @@ def main():
 	RUNNING_CAMERA = True
 	next_move = ['g1', 'h2']
 
+	guess_array = []
+	guess_index = 0
+	
+
 
 	print('Initiailizing Camera')
 	camera, dummyFrame = initialize_camera()
@@ -170,36 +174,42 @@ def main():
 			frame = img_pipeline(frame)
 			imgs = parse_full_image(frame, calibrationDictionary)
 
-
+			#----------------------------------------
 			#Get CNN Predictions / Update Dictionary
-
+			#----------------------------------------
 
 			predictions_array = get_new_predictions(model, imgs, chessboardDictionary)
-
-
+			guess_array.append(predictions_array)
+			guess_index += 1
 			time.sleep(1)
 
 			
 
-			#THREAD EVENTS
-		
+			if(guess_index >= 2):
+				
 
-			chessboard_engine_event.set()
+				average_predictions_array = average_Predictions(guess_array)
+				guess_index = 0
 
-			time.sleep(2)
-
-
-			result = readNextMove()
-			next_move = [result[0:2], result[2:4]]
-			print('under engine event: ', next_move)
+				#THREAD EVENTS
 			
+				print('pre time.sleep')
+				chessboard_engine_event.set()
 
-			window_display_event.set()
-			time.sleep(2)
-			arm_event.set()
-			time.sleep(2)
+				time.sleep(2)
+				print('post time.sleep')
 
-			#rawCapture.seek(0)
+				result = readNextMove()
+				next_move = [result[0:2], result[2:4]]
+				print('under engine event: ', next_move)
+				
+
+				#window_display_event.set()
+				#time.sleep(2)
+				arm_event.set()
+				time.sleep(2)
+
+
 			rawCapture.truncate(0)
 
 	initiate_shutdown(threads, camera, termination_event)

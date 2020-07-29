@@ -44,7 +44,7 @@ def animate(i):
         
     #print (phi,theta)
 
-    #draw Boundry
+    #draw play feild
     bx = [p.boardLength/2,p.boardLength/2,(p.boardLength/2)*-1,(p.boardLength/2)*-1,p.boardLength/2]
     by = [p.boardLength + p.boardOffset,p.boardOffset,p.boardOffset,p.boardLength + p.boardOffset,p.boardLength + p.boardOffset]
     
@@ -80,5 +80,5 @@ def animate(i):
 
 
 
-ani = animation.FuncAnimation(fig, animate, interval = 100)
+ani = animation.FuncAnimation(fig, animate, interval = 10)
 plt.show()

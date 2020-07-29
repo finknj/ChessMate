@@ -27,7 +27,7 @@ deprecation._PRINT_DEPRECATION_WARNINGS = False
 tf.compat.v1.disable_eager_execution()
 tf.compat.v1.keras.backend.clear_session()
 config = tf.compat.v1.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.7
+config.gpu_options.per_process_gpu_memory_fraction = 0.5
 session = tf.compat.v1.Session(config = config)
 
 #==========================================================================================================================
@@ -226,6 +226,11 @@ def get_new_predictions(model, imgs, predictions_dictionary):
 	return( new_predictions ) 
 
 
+#get_new_predictions
+# Turn into numpy array 
+# use array.mode to gather best 2/3
+
+
 #==========================================================================================================================
 #FEN NOTATION
 #=================================================================================================================
@@ -233,7 +238,9 @@ def get_new_predictions(model, imgs, predictions_dictionary):
 
 async def getEngineResults(board):
 	transport, engine = await chess.engine.popen_uci('stockfish')
-	result = await engine.play(board, chess.engine.Limit(time = 2))
+	print('here1')
+	result = await engine.play(board, chess.engine.Limit(time = 5))
+	print('here2 ', result)
 	await engine.quit()
 	return result.move
 
@@ -250,10 +257,16 @@ def update_FEN(next_move, predictions_dictionary, predictions_event, termination
 		predictions_event.wait()
 		print('Updating FEN notation')	
 		line_list = dictionary_to_text(predictions_dictionary)
-
+		#line_list = 'rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b'
+		
 		board = chess.Board(line_list)
+		valid = board.is_valid()
+		print('valid: ' , valid)		
+					
 		asyncio.set_event_loop_policy(chess.engine.EventLoopPolicy())
 		result = asyncio.run(getEngineResults(board))
+		print('exit async')
+		#sleep(2)
 		result = str(result)
 		next_move = [result[0:2], result[2:4]]
 		

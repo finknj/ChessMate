@@ -1,6 +1,7 @@
-from .MotorControl import MotorControl
-from .EndEffectorControl import EndEffectorControl
-from .Parameters import *
+from MotorControl import MotorControl
+from EndEffectorControl import EndEffectorControl
+import Parameters as p
+import time
 
 
 
@@ -16,13 +17,17 @@ class RobotControl:
         self.MC = MotorControl()
         self.EE = EndEffectorControl()
         self.import_chessboard_dic(21)
+
+        self.EE.set_elevation("top")
+        # return home
+        #self.MC.move_arm_home()
         
     def import_chessboard_dic(self,chessboard_in):
         self.chessboardDictionary = chessboard_in
 
     # return the class of piece occupying the square 
     def get_square_type(self, indexKey):
-        typeCode = int(self.chessboardDictionary.get(indexKey))
+        typeCode = self.chessboardDictionary.get(indexKey)
         switcher = {
             6: "empty",
             0:"bishop",
@@ -57,11 +62,13 @@ class RobotControl:
     # command to robot to mave a chess move from square arg1 to arg2 (a1,h8)
     def move_command(self, chessEngine_in):
         ts1 = time.time()
+        # return home
+        self.MC.move_arm_home()
         
         self.initialPos = chessEngine_in[0]
-        self.initialType = self.get_square_type(self.initialPos)
+        self.initialType = "queen" #self.get_square_type(self.initialPos)
         self.finalPos = chessEngine_in[1]
-        self.finalType = self.get_square_type(self.finalPos)
+        self.finalType = "pawn"#self.get_square_type(self.finalPos)
  
         if (self.finalType == "empty") : self.capture = False
         else : self.capture = True
@@ -70,7 +77,7 @@ class RobotControl:
         if self.capture == True:
             print ("Chess Capture: ",self.finalType,"(",self.finalPos,")")
             #get final pos coord
-            goCoord = get_square_coord(self.finalPos)
+            goCoord = p.get_square_coord(self.finalPos)
             #move to final position
             self.MC.move_robot_arm(goCoord[0],goCoord[1])
             #pick up piece
@@ -80,17 +87,17 @@ class RobotControl:
             #pick up piece
             self.EE.set_elevation("top")
             #move to drop off
-            self.MC.move_robot_arm(190,200)
+            self.MC.move_robot_arm(250,250)
             #drop piece
             self.EE.set_elevation(self.finalType)
             #disengage magnet
             self.EE.set_magnet(0)
             #raise ee
             self.EE.set_elevation("top")
-        
+            
         print("Chess Move: ",self.initialType," (",self.initialPos,") to (",self.finalPos,")")
         #get initial pos coord
-        goCoord = get_square_coord(self.initialPos)
+        goCoord = p.get_square_coord(self.initialPos)
         #move to initial position
         self.MC.move_robot_arm(goCoord[0],goCoord[1]) 
         #pick up piece
@@ -100,7 +107,7 @@ class RobotControl:
         #pick up piece
         self.EE.set_elevation("top")
         #get final pos coord
-        goCoord = get_square_coord(self.finalPos)
+        goCoord = p.get_square_coord(self.finalPos)
         #move to final position
         self.MC.move_robot_arm(goCoord[0],goCoord[1])
         #drop piece
@@ -119,6 +126,7 @@ class RobotControl:
 
 
 # example run 
-#RC = RobotControl()
+RC = RobotControl()
 #RC.import_chessboard_dic(chessboard_in)
-#RC.move_command(["a1","h8"])
+#RC.move_command(["a5","h4"])
+RC.move_command(["a1","h8"])

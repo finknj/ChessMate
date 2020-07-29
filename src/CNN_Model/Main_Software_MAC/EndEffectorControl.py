@@ -1,5 +1,5 @@
 #End Effector
-from .Parameters import *
+import Parameters as p
 from time import sleep
 import math
 import RPi.GPIO as GPIO
@@ -7,7 +7,7 @@ import RPi.GPIO as GPIO
 class EndEffectorControl:
 
     def __init__ (self):
-        self.servoPin = servoPin
+        self.servoPin = p.servoPin
         # servo pos is a degree from 0 to 180 
         self.servoPos = 0
         #set up the GPIO outputs here
@@ -17,18 +17,18 @@ class EndEffectorControl:
         self.pwm=GPIO.PWM(self.servoPin,50)
         #set up magnet output
         self.magnetVal = 0
-        self.magnetPin = magnetPin
+        self.magnetPin = p.magnetPin
         GPIO.setup(self.magnetPin,GPIO.OUT)
         GPIO.output(self.magnetPin,0)
         #simmulaition write to file angle
-        self.f = open(servoFile,"w")
+        self.f = open(p.servoFile,"w")
         self.publish_ee()
 
     # set the servo angle based on how tall a piece is
     #arg = name of chess peice class (pawn,king,knight)
     def set_elevation(self,pieceType):
         #get the hight from parameters file
-        height = get_piece_height(pieceType)
+        height = p.get_piece_height(pieceType) + p.eeOffset
         #get the angle servo should approch based on height
         angle = self.calc_servo_pos(height)
         # move servo to target position
@@ -42,9 +42,9 @@ class EndEffectorControl:
 
     #use equation to calc angle of rack pinion from argument distance
     def calc_servo_pos(self,height_in):
-        s = pocElevation- height_in
+        s = p.pocElevation - height_in
         n = 180 * s
-        d = math.pi * pinionRad
+        d = math.pi * p.pinionRad
         theta = n/d
         
         return (theta)
@@ -59,7 +59,7 @@ class EndEffectorControl:
         duty = angle_in / 18 + 2
         GPIO.output(self.servoPin,True)
         self.pwm.ChangeDutyCycle(duty)
-        sleep(2)
+        sleep(1)
         self.servoPos = angle_in
         #GPIO.output(self.servoPin,False)
         
@@ -68,17 +68,16 @@ class EndEffectorControl:
         #write new angle to file 
         self.publish_ee()
 
-        
         return(self.servoPos)
 
-    def set_magnet(self,onff):
+    def set_magnet(self, onff):
         if onff == 1:
             self.magnetVal = 1
-            #GPIO.output(self.magnetPin,self.magnetVal)
+            GPIO.output(self.magnetPin,self.magnetVal)
             print("Activated magnet")
         else:
             self.magnetVal = 0
-            #GPIO.output(self.magnetPin,self.magnetVal)
+            GPIO.output(self.magnetPin,self.magnetVal)
             print("Deactivated magnet")
         self.publish_ee()
         sleep(.5)
@@ -93,9 +92,15 @@ class EndEffectorControl:
     
 
 e = EndEffectorControl()
-#e.set_magnet(1)
-e.set_elevation("king")
 e.set_elevation("top")
+# 
 e.set_elevation("pawn")
+# e.set_elevation("rooke")
+e.set_magnet(0)
+#e.set_elevation("top")
+sleep(2)
+# e.set_elevation("rooke")
+# e.set_magnet(0)
 e.set_elevation("top")
+
 

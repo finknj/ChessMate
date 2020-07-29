@@ -22,7 +22,7 @@ degPerStep =  0.1310997815
 #steps per rotation
 stepsPerRotation = 2746
 # seconds per step
-secPerStep = .002 #.0039727207
+secPerStep = .005 #.0039727207
 #Sholder motor pins
 smDirPin = 10 # this is the direction pin
 smStepPin = 9 # signal to step pin
@@ -34,8 +34,8 @@ emFile = "emfile.txt"
 
 
 #servo motor and end effector
-servoPin = 12
-magnetPin = 23
+servoPin = 23
+magnetPin = 3
 servoFile = "servofile.txt"
 pinionRad = 41.38
 pocElevation = 169
